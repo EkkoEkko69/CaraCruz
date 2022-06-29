@@ -1154,26 +1154,26 @@ var tempDouble;
 var tempI64;
 
 var ASM_CONSTS = {
- 3240792: function() {
+ 2952632: function() {
   Module["emscripten_get_now_backup"] = performance.now;
  },
- 3240847: function($0) {
+ 2952687: function($0) {
   performance.now = function() {
    return $0;
   };
  },
- 3240895: function($0) {
+ 2952735: function($0) {
   performance.now = function() {
    return $0;
   };
  },
- 3240943: function() {
+ 2952783: function() {
   performance.now = Module["emscripten_get_now_backup"];
  },
- 3240998: function() {
+ 2952838: function() {
   return Module.webglContextAttributes.premultipliedAlpha;
  },
- 3241059: function() {
+ 2952899: function() {
   return Module.webglContextAttributes.preserveDrawingBuffer;
  }
 };
@@ -2638,45 +2638,6 @@ function _JS_Sound_Set3D(channelInstance, threeD) {
  channel.set3D(threeD);
 }
 
-function _JS_Sound_SetListenerOrientation(x, y, z, xUp, yUp, zUp) {
- if (WEBAudio.audioWebEnabled == 0) return;
- x = -x;
- y = -y;
- z = -z;
- var l = WEBAudio.audioContext.listener;
- if (l.forwardX) {
-  if (l.forwardX.value !== x) l.forwardX.value = x;
-  if (l.forwardY.value !== y) l.forwardY.value = y;
-  if (l.forwardZ.value !== z) l.forwardZ.value = z;
-  if (l.upX.value !== x) l.upX.value = x;
-  if (l.upY.value !== y) l.upY.value = y;
-  if (l.upZ.value !== z) l.upZ.value = z;
- } else if (l._forwardX !== x || l._forwardY !== y || l._forwardZ !== z || l._upX !== xUp || l._upY !== yUp || l._upZ !== zUp) {
-  l.setOrientation(x, y, z, xUp, yUp, zUp);
-  l._forwardX = x;
-  l._forwardY = y;
-  l._forwardZ = z;
-  l._upX = xUp;
-  l._upY = yUp;
-  l._upZ = zUp;
- }
-}
-
-function _JS_Sound_SetListenerPosition(x, y, z) {
- if (WEBAudio.audioWebEnabled == 0) return;
- var l = WEBAudio.audioContext.listener;
- if (l.positionX) {
-  if (l.positionX.value !== x) l.positionX.value = x;
-  if (l.positionY.value !== y) l.positionY.value = y;
-  if (l.positionZ.value !== z) l.positionZ.value = z;
- } else if (l._positionX !== x || l._positionY !== y || l._positionZ !== z) {
-  l.setPosition(x, y, z);
-  l._positionX = x;
-  l._positionY = y;
-  l._positionZ = z;
- }
-}
-
 function _JS_Sound_SetLoop(channelInstance, loop) {
  if (WEBAudio.audioWebEnabled == 0) return;
  var channel = WEBAudio.audioInstances[channelInstance];
@@ -3063,119 +3024,6 @@ function _JS_Video_UpdateToTexture(video, tex, adjustToLinearspace) {
 
 function _JS_Video_Width(video) {
  return videoInstances[video].videoWidth;
-}
-
-var activeWebCams = {};
-
-function _JS_WebCamVideo_CanPlay(deviceId) {
- var webcam = activeWebCams[deviceId];
- return webcam && webcam.video.videoWidth > 0 && webcam.video.videoHeight > 0;
-}
-
-function _JS_WebCamVideo_GetDeviceName(deviceId, buffer, bufferSize) {
- var webcam = videoInputDevices[deviceId];
- var name = webcam ? webcam.name : "(disconnected input #" + (deviceId + 1) + ")";
- if (buffer) stringToUTF8(name, buffer, bufferSize);
- return lengthBytesUTF8(name);
-}
-
-function _JS_WebCamVideo_GetNativeHeight(deviceId) {
- return activeWebCams[deviceId] && activeWebCams[deviceId].video.videoHeight;
-}
-
-function _JS_WebCamVideo_GetNativeWidth(deviceId) {
- return activeWebCams[deviceId] && activeWebCams[deviceId].video.videoWidth;
-}
-
-function _JS_WebCamVideo_GetNumDevices() {
- var numDevices = 0;
- Object.keys(videoInputDevices).forEach(function(i) {
-  numDevices = Math.max(numDevices, videoInputDevices[i].id + 1);
- });
- return numDevices;
-}
-
-function _JS_WebCamVideo_GrabFrame(deviceId, buffer, destWidth, destHeight) {
- var webcam = activeWebCams[deviceId];
- if (!webcam) return;
- var timeNow = performance.now();
- if (timeNow < webcam.nextFrameAvailableTime) {
-  return;
- }
- webcam.nextFrameAvailableTime += webcam.frameLengthInMsecs;
- if (webcam.nextFrameAvailableTime < timeNow) {
-  webcam.nextFrameAvailableTime = timeNow + webcam.frameLengthInMsecs;
- }
- var canvas = webcam.canvas;
- if (canvas.width != destWidth || canvas.height != destHeight || !webcam.context2d) {
-  canvas.width = destWidth;
-  canvas.height = destHeight;
-  webcam.context2d = canvas.getContext("2d");
- }
- var context = webcam.context2d;
- context.drawImage(webcam.video, 0, 0, webcam.video.videoWidth, webcam.video.videoHeight, 0, 0, destWidth, destHeight);
- HEAPU8.set(context.getImageData(0, 0, destWidth, destHeight).data, buffer);
- return 1;
-}
-
-function _JS_WebCamVideo_IsFrontFacing(deviceId) {
- return videoInputDevices[deviceId].isFrontFacing;
-}
-
-function _JS_WebCamVideo_Start(deviceId) {
- if (activeWebCams[deviceId]) {
-  ++activeWebCams[deviceId].refCount;
-  return;
- }
- if (!videoInputDevices[deviceId]) {
-  console.error("Cannot start video input with ID " + deviceId + ". No such ID exists! Existing video inputs are:");
-  console.dir(videoInputDevices);
-  return;
- }
- navigator.mediaDevices.getUserMedia({
-  audio: false,
-  video: videoInputDevices[deviceId].deviceId ? {
-   deviceId: {
-    exact: videoInputDevices[deviceId].deviceId
-   }
-  } : true
- }).then(function(stream) {
-  var video = document.createElement("video");
-  video.srcObject = stream;
-  if (/(iPhone|iPad|iPod)/.test(navigator.userAgent)) {
-   warnOnce("Applying iOS Safari specific workaround to video playback: https://bugs.webkit.org/show_bug.cgi?id=217578");
-   video.setAttribute("playsinline", "");
-  }
-  video.play();
-  var canvas = document.createElement("canvas");
-  activeWebCams[deviceId] = {
-   video: video,
-   canvas: document.createElement("canvas"),
-   stream: stream,
-   frameLengthInMsecs: 1e3 / stream.getVideoTracks()[0].getSettings().frameRate,
-   nextFrameAvailableTime: 0,
-   refCount: 1
-  };
- }).catch(function(e) {
-  console.error("Unable to start video input! " + e);
- });
-}
-
-function _JS_WebCamVideo_Stop(deviceId) {
- var webcam = activeWebCams[deviceId];
- if (!webcam) return;
- if (--webcam.refCount <= 0) {
-  webcam.video.pause();
-  webcam.video.srcObject = null;
-  webcam.stream.getVideoTracks().forEach(function(track) {
-   track.stop();
-  });
-  delete activeWebCams[deviceId];
- }
-}
-
-function _JS_WebCam_IsSupported() {
- return !!navigator.mediaDevices;
 }
 
 var wr = {
@@ -7910,16 +7758,6 @@ function ___sys_sendto(fd, message, length, flags, addr, addr_len) {
  }
 }
 
-function ___sys_shutdown(fd, how) {
- try {
-  getSocketFromFD(fd);
-  return -52;
- } catch (e) {
-  if (typeof FS === "undefined" || !(e instanceof FS.ErrnoError)) abort(e);
-  return -e.errno;
- }
-}
-
 function ___sys_socket(domain, type, protocol) {
  try {
   var sock = SOCKFS.createSocket(domain, type, protocol);
@@ -10756,43 +10594,6 @@ function _getTempRet0() {
  return getTempRet0();
 }
 
-function getHostByName(name) {
- var ret = _malloc(20);
- var nameBuf = _malloc(name.length + 1);
- stringToUTF8(name, nameBuf, name.length + 1);
- HEAP32[ret >> 2] = nameBuf;
- var aliasesBuf = _malloc(4);
- HEAP32[aliasesBuf >> 2] = 0;
- HEAP32[ret + 4 >> 2] = aliasesBuf;
- var afinet = 2;
- HEAP32[ret + 8 >> 2] = afinet;
- HEAP32[ret + 12 >> 2] = 4;
- var addrListBuf = _malloc(12);
- HEAP32[addrListBuf >> 2] = addrListBuf + 8;
- HEAP32[addrListBuf + 4 >> 2] = 0;
- HEAP32[addrListBuf + 8 >> 2] = inetPton4(DNS.lookup_name(name));
- HEAP32[ret + 16 >> 2] = addrListBuf;
- return ret;
-}
-
-function _gethostbyaddr(addr, addrlen, type) {
- if (type !== 2) {
-  setErrNo(5);
-  return null;
- }
- addr = HEAP32[addr >> 2];
- var host = inetNtop4(addr);
- var lookup = DNS.lookup_addr(host);
- if (lookup) {
-  host = lookup;
- }
- return getHostByName(host);
-}
-
-function _gethostbyname(name) {
- return getHostByName(UTF8ToString(name));
-}
-
 function _getpwuid() {
  throw "getpwuid: TODO";
 }
@@ -13576,8 +13377,6 @@ var asmLibraryArg = {
  "JS_Sound_ReleaseInstance": _JS_Sound_ReleaseInstance,
  "JS_Sound_ResumeIfNeeded": _JS_Sound_ResumeIfNeeded,
  "JS_Sound_Set3D": _JS_Sound_Set3D,
- "JS_Sound_SetListenerOrientation": _JS_Sound_SetListenerOrientation,
- "JS_Sound_SetListenerPosition": _JS_Sound_SetListenerPosition,
  "JS_Sound_SetLoop": _JS_Sound_SetLoop,
  "JS_Sound_SetLoopPoints": _JS_Sound_SetLoopPoints,
  "JS_Sound_SetPaused": _JS_Sound_SetPaused,
@@ -13625,16 +13424,6 @@ var asmLibraryArg = {
  "JS_Video_Time": _JS_Video_Time,
  "JS_Video_UpdateToTexture": _JS_Video_UpdateToTexture,
  "JS_Video_Width": _JS_Video_Width,
- "JS_WebCamVideo_CanPlay": _JS_WebCamVideo_CanPlay,
- "JS_WebCamVideo_GetDeviceName": _JS_WebCamVideo_GetDeviceName,
- "JS_WebCamVideo_GetNativeHeight": _JS_WebCamVideo_GetNativeHeight,
- "JS_WebCamVideo_GetNativeWidth": _JS_WebCamVideo_GetNativeWidth,
- "JS_WebCamVideo_GetNumDevices": _JS_WebCamVideo_GetNumDevices,
- "JS_WebCamVideo_GrabFrame": _JS_WebCamVideo_GrabFrame,
- "JS_WebCamVideo_IsFrontFacing": _JS_WebCamVideo_IsFrontFacing,
- "JS_WebCamVideo_Start": _JS_WebCamVideo_Start,
- "JS_WebCamVideo_Stop": _JS_WebCamVideo_Stop,
- "JS_WebCam_IsSupported": _JS_WebCam_IsSupported,
  "JS_WebRequest_Abort": _JS_WebRequest_Abort,
  "JS_WebRequest_Create": _JS_WebRequest_Create,
  "JS_WebRequest_GetResponseHeaders": _JS_WebRequest_GetResponseHeaders,
@@ -13679,7 +13468,6 @@ var asmLibraryArg = {
  "__sys_rename": ___sys_rename,
  "__sys_rmdir": ___sys_rmdir,
  "__sys_sendto": ___sys_sendto,
- "__sys_shutdown": ___sys_shutdown,
  "__sys_socket": ___sys_socket,
  "__sys_stat64": ___sys_stat64,
  "__sys_statfs64": ___sys_statfs64,
@@ -13753,8 +13541,6 @@ var asmLibraryArg = {
  "fd_write": _fd_write,
  "flock": _flock,
  "getTempRet0": _getTempRet0,
- "gethostbyaddr": _gethostbyaddr,
- "gethostbyname": _gethostbyname,
  "getpwuid": _getpwuid,
  "gettimeofday": _gettimeofday,
  "glActiveTexture": _glActiveTexture,
@@ -14695,11 +14481,7 @@ var dynCall_vjji = Module["dynCall_vjji"] = createExportWrapper("dynCall_vjji");
 
 var dynCall_ij = Module["dynCall_ij"] = createExportWrapper("dynCall_ij");
 
-var dynCall_vif = Module["dynCall_vif"] = createExportWrapper("dynCall_vif");
-
 var dynCall_viffff = Module["dynCall_viffff"] = createExportWrapper("dynCall_viffff");
-
-var dynCall_vid = Module["dynCall_vid"] = createExportWrapper("dynCall_vid");
 
 var dynCall_viiiiiji = Module["dynCall_viiiiiji"] = createExportWrapper("dynCall_viiiiiji");
 
@@ -14719,7 +14501,7 @@ var dynCall_vij = Module["dynCall_vij"] = createExportWrapper("dynCall_vij");
 
 var dynCall_vjiiiiiii = Module["dynCall_vjiiiiiii"] = createExportWrapper("dynCall_vjiiiiiii");
 
-var dynCall_viiiif = Module["dynCall_viiiif"] = createExportWrapper("dynCall_viiiif");
+var dynCall_vif = Module["dynCall_vif"] = createExportWrapper("dynCall_vif");
 
 var dynCall_iiiijiii = Module["dynCall_iiiijiii"] = createExportWrapper("dynCall_iiiijiii");
 
@@ -14731,53 +14513,11 @@ var dynCall_fif = Module["dynCall_fif"] = createExportWrapper("dynCall_fif");
 
 var dynCall_iiiiiifff = Module["dynCall_iiiiiifff"] = createExportWrapper("dynCall_iiiiiifff");
 
-var dynCall_iiiiiifiif = Module["dynCall_iiiiiifiif"] = createExportWrapper("dynCall_iiiiiifiif");
-
 var dynCall_iiiiiifiii = Module["dynCall_iiiiiifiii"] = createExportWrapper("dynCall_iiiiiifiii");
-
-var dynCall_iiiiiiifiif = Module["dynCall_iiiiiiifiif"] = createExportWrapper("dynCall_iiiiiiifiif");
 
 var dynCall_fiff = Module["dynCall_fiff"] = createExportWrapper("dynCall_fiff");
 
-var dynCall_fiiiiiifiifif = Module["dynCall_fiiiiiifiifif"] = createExportWrapper("dynCall_fiiiiiifiifif");
-
-var dynCall_fiiiiiifiiiif = Module["dynCall_fiiiiiifiiiif"] = createExportWrapper("dynCall_fiiiiiifiiiif");
-
-var dynCall_iifiiiijii = Module["dynCall_iifiiiijii"] = createExportWrapper("dynCall_iifiiiijii");
-
-var dynCall_vifif = Module["dynCall_vifif"] = createExportWrapper("dynCall_vifif");
-
-var dynCall_vifijii = Module["dynCall_vifijii"] = createExportWrapper("dynCall_vifijii");
-
-var dynCall_iiiifffiii = Module["dynCall_iiiifffiii"] = createExportWrapper("dynCall_iiiifffiii");
-
-var dynCall_viffiiiif = Module["dynCall_viffiiiif"] = createExportWrapper("dynCall_viffiiiif");
-
-var dynCall_viffiifffffiii = Module["dynCall_viffiifffffiii"] = createExportWrapper("dynCall_viffiifffffiii");
-
-var dynCall_viffffiifffiiiiif = Module["dynCall_viffffiifffiiiiif"] = createExportWrapper("dynCall_viffffiifffiiiiif");
-
-var dynCall_iiiifffffii = Module["dynCall_iiiifffffii"] = createExportWrapper("dynCall_iiiifffffii");
-
-var dynCall_viiiiiiiiiiifii = Module["dynCall_viiiiiiiiiiifii"] = createExportWrapper("dynCall_viiiiiiiiiiifii");
-
-var dynCall_iiiifiiiii = Module["dynCall_iiiifiiiii"] = createExportWrapper("dynCall_iiiifiiiii");
-
-var dynCall_iiiiifiiiiif = Module["dynCall_iiiiifiiiiif"] = createExportWrapper("dynCall_iiiiifiiiiif");
-
-var dynCall_viiifiiiii = Module["dynCall_viiifiiiii"] = createExportWrapper("dynCall_viiifiiiii");
-
-var dynCall_viiiifiiiiif = Module["dynCall_viiiifiiiiif"] = createExportWrapper("dynCall_viiiifiiiiif");
-
-var dynCall_iifff = Module["dynCall_iifff"] = createExportWrapper("dynCall_iifff");
-
 var dynCall_iif = Module["dynCall_iif"] = createExportWrapper("dynCall_iif");
-
-var dynCall_viijijj = Module["dynCall_viijijj"] = createExportWrapper("dynCall_viijijj");
-
-var dynCall_viijj = Module["dynCall_viijj"] = createExportWrapper("dynCall_viijj");
-
-var dynCall_viiiij = Module["dynCall_viiiij"] = createExportWrapper("dynCall_viiiij");
 
 var dynCall_iiijji = Module["dynCall_iiijji"] = createExportWrapper("dynCall_iiijji");
 
@@ -14785,19 +14525,19 @@ var dynCall_ijjiiiii = Module["dynCall_ijjiiiii"] = createExportWrapper("dynCall
 
 var dynCall_iiiiiifffiiifiii = Module["dynCall_iiiiiifffiiifiii"] = createExportWrapper("dynCall_iiiiiifffiiifiii");
 
-var dynCall_viiif = Module["dynCall_viiif"] = createExportWrapper("dynCall_viiif");
-
 var dynCall_fiiiif = Module["dynCall_fiiiif"] = createExportWrapper("dynCall_fiiiif");
 
 var dynCall_viiifffiiij = Module["dynCall_viiifffiiij"] = createExportWrapper("dynCall_viiifffiiij");
 
 var dynCall_viiffiiii = Module["dynCall_viiffiiii"] = createExportWrapper("dynCall_viiffiiii");
 
+var dynCall_viiif = Module["dynCall_viiif"] = createExportWrapper("dynCall_viiif");
+
 var dynCall_viffffffffffffiiii = Module["dynCall_viffffffffffffiiii"] = createExportWrapper("dynCall_viffffffffffffiiii");
 
-var dynCall_ff = Module["dynCall_ff"] = createExportWrapper("dynCall_ff");
-
 var dynCall_vidii = Module["dynCall_vidii"] = createExportWrapper("dynCall_vidii");
+
+var dynCall_vid = Module["dynCall_vid"] = createExportWrapper("dynCall_vid");
 
 var dynCall_vidd = Module["dynCall_vidd"] = createExportWrapper("dynCall_vidd");
 
@@ -14814,6 +14554,8 @@ var dynCall_vff = Module["dynCall_vff"] = createExportWrapper("dynCall_vff");
 var dynCall_vfff = Module["dynCall_vfff"] = createExportWrapper("dynCall_vfff");
 
 var dynCall_f = Module["dynCall_f"] = createExportWrapper("dynCall_f");
+
+var dynCall_ff = Module["dynCall_ff"] = createExportWrapper("dynCall_ff");
 
 var dynCall_iiiiiiffiiiiiiiiiffffiii = Module["dynCall_iiiiiiffiiiiiiiiiffffiii"] = createExportWrapper("dynCall_iiiiiiffiiiiiiiiiffffiii");
 
